@@ -1,0 +1,99 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+::: {.callout-important appearance="simple"}
+# Полезные ссылки
+
+### Загрузка данных в приложение:
+
+<https://mastering-shiny.org/action-transfer.html#upload>
+:::
+
+::: {.callout-note appearance="simple"}
+# Общая информация (страница 1)
+
+#### Есть 3 элемента управления боковой панелью:
+
+1.  Прибор
+2.  Сортировка по день, неделя, месяц
+3.  Диапазон дат
+
+#### Output: Main Panel
+
+1.  Scatterplot
+
+2.  Boxplot
+
+3.  table
+
+*все меняются в зависимости от side panel*
+
+#### По умолчанию:
+
+-   дата = макс интервал (DF)
+
+-   Прибор: Imm
+
+-   Данные по дням
+
+План:
+
+1.  Создать sidepanel_contecst
+2.  Создать main panel output
+3.  загрузить данные
+4.  
+:::
+
+```{r week_count}
+
+imm_sp_week <- imm_instr  |>
+  arrange(date_order) |> 
+  mutate(week_number = format(date_order, "%Y-%U")) |> 
+  mutate(week_start_date = date_order - lubridate::wday(date_order) + 1) |> 
+  relocate(week_start_date, .before = weekday)
+
+imm_sp_week <-  imm_sp_week |> 
+  group_by(week_number) |> 
+  summarise(total_count = sum(n()))
+           
+imm_sp_week <- imm_instr %>%
+  arrange(date_order) %>%
+  mutate(week_number = format(date_order, "%Y-%U")) %>%
+  mutate(week_start_date = date_order - lubridate::wday(date_order) + 1) %>%
+  group_by(week_start_date, week_number) %>%
+  summarise(total_count = sum(n()))
+
+
+ggplot(imm_sp_week, aes(x = week_start_date, y = count)) +
+  geom_point(size = 2, col = "darkgreen", alpha = 0.7) +
+  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 week") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+```{r month_count}
+imm_instr <- imm_instr |> 
+  mutate(month = format(date_order, "%Y-%m")) |> 
+  relocate(month, .after = date_order) |> 
+  count(month)
+
+```
+
+```{r work with Boxplot}
+
+ imm_instr_draft <- imm_instr |> 
+   mutate(weekday = weekdays(date_order, abbreviate = TRUE)) |> # create days of week
+   relocate(weekday, .before = date_order) |> 
+   group_by(date_order,weekday) |> 
+   summarise(n = n())
+ 
+ imm_instr_draft$weekday <- factor(imm_instr_draft$weekday, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+ 
+ imm_instr_draft |> 
+   ggplot(aes(y = n , fill = weekday)) +
+   geom_boxplot(aes(x = weekday)) +
+   labs(title = "Boxplot по количеству тестов по дням недели (за выбранный период)", y = "Количество тестов", x = "Дни недели")
+```
